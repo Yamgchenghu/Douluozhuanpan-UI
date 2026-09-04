@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>斗罗转盘辅助系统 v0.0.4</title>
+<style>
+/* ===== 嵌入游戏字体（TW-Kai 楷体, 与原版systemfont.ttf一致） ===== */
+@font-face{font-family:'DouluoKai';src:url('systemfont.ttf') format('truetype');font-weight:normal;font-style:normal;font-display:swap;}
+@font-face{font-family:'DouluoKai';src:url('systemfont.ttf') format('truetype');font-weight:bold;font-style:normal;font-display:swap;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#1a1020;width:1280px;height:720px;overflow:hidden;font-family:'DouluoKai','Microsoft YaHei','SimHei','PingFang SC',sans-serif;user-select:none;}
+#app{width:1280px;height:720px;position:relative;}
+.hidden{display:none!important;}
+/* ===== 背景图 ===== */
+#bg-img{position:absolute;left:0;top:0;width:1280px;height:720px;z-index:0;object-fit:cover;}
+/* ===== Panel框架 (CSS绘制装饰) ===== */
+.panel-ui1{position:absolute;left:10px;top:10px;width:1260px;height:700px;border:3px solid #000;background:rgba(255,235,255,0.65);z-index:10;}
+.panel-left{position:absolute;left:10px;top:10px;width:385px;height:700px;border:3px solid #000;background:rgba(255,235,255,0.65);z-index:10;overflow:hidden;}
+.panel-mid{position:absolute;left:415px;top:50px;width:415px;height:660px;border:3px solid #000;background:rgba(255,225,188,0.37);z-index:10;overflow:hidden;}
+.panel-mid-top{position:absolute;left:0;top:0;width:415px;height:270px;background:rgba(255,225,188,0.13);}
+.panel-mid-bot{position:absolute;left:0;top:270px;width:415px;height:390px;background:rgba(255,225,188,0.13);}
+.panel-mid-line{position:absolute;left:0;top:270px;width:415px;height:2px;background:#000;z-index:2;}
+.panel-right{position:absolute;left:840px;top:50px;width:430px;height:660px;border:3px solid #000;background:rgba(225,225,255,0.5);z-index:10;overflow:hidden;}
+.panel-topbar{position:absolute;left:415px;top:10px;width:855px;height:35px;border:3px solid #000;background:rgba(255,215,245,0.5);z-index:10;overflow:hidden;}
+/* ===== 左面板内部 ===== */
+.debug-area{position:absolute;left:0;top:0;width:385px;height:555px;overflow:hidden;padding:5px;}
+.debug-row{display:flex;align-items:center;margin:2px 0;font-size:12px;}
+.debug-label{color:#280050;text-align:center;width:100px;flex-shrink:0;}
+.debug-val{color:#000050;text-align:center;width:60px;font-weight:bold;}
+.debug-btn{display:inline-block;padding:1px 5px;margin:0 1px;color:#500033;font-size:12px;cursor:pointer;border:1px solid transparent;background:rgba(200,200,210,0.3);}
+.debug-btn:hover{background:rgba(200,100,200,0.3);border-color:#888;}
+.grid-12{position:absolute;left:0;top:585px;width:385px;height:90px;display:grid;gap:0;}
+.grid-cell{display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;padding:0 2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border:1px solid rgba(0,0,0,0.05);}
+.grid-cell:hover{background:rgba(200,200,255,0.4);}
+.input-bar{position:absolute;left:0;top:677px;width:385px;height:20px;font-size:13px;color:#330000;padding:0 5px;}
+.text-input{position:absolute;bottom:0;left:5px;width:340px;height:22px;border:1px solid #888;font-size:12px;padding:1px 4px;z-index:20;background:rgba(255,255,255,0.85);}
+/* ===== 中间面板 ===== */
+.mid-info{position:absolute;left:5px;top:8px;width:405px;z-index:3;font-size:14px;color:#000;}
+/* ===== 右面板(年表) ===== */
+.chronicle{position:absolute;left:5px;top:5px;width:420px;height:650px;overflow-y:auto;z-index:11;}
+.chron-entry{height:32px;display:flex;align-items:center;font-size:13px;}
+.chron-year{color:#b96900;font-weight:bold;text-align:center;width:100%;display:flex;align-items:center;justify-content:center;}
+.chron-year img{width:28px;height:22px;margin-right:4px;vertical-align:middle;image-rendering:auto;}
+.chron-question{color:#46145a;text-align:center;width:100%;}
+.chron-result{color:#697d96;padding-left:50px;}
+/* ===== 顶栏 ===== */
+.topbar-text{padding:6px 8px;font-size:13px;color:#000;white-space:nowrap;overflow:hidden;}
+/* ===== 按钮/开关 ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:4px 12px;border:2px solid #000;cursor:pointer;font-size:13px;background:rgba(210,210,220,0.63);color:#000;}
+.btn:hover{background:rgba(180,180,200,0.8);}
+.btn-blue{background:rgba(50,120,190,0.78);color:#fff;}
+.btn-green{background:rgba(0,190,0,0.47);}
+.btn-red{background:rgba(200,80,80,0.51);}
+.btn-pink{background:rgba(190,50,110,0.78);color:#fff;}
+.toggle{display:inline-flex;width:90px;height:30px;border:3px solid #000;cursor:pointer;align-items:center;justify-content:center;font-size:14px;font-weight:bold;}
+.toggle-on{background:rgba(0,190,0,0.47);}
+.toggle-off{background:rgba(190,0,0,0.47);}
+.slider-opt{width:70px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #888;font-size:13px;cursor:pointer;}
+.back-link{position:absolute;left:20px;top:20px;color:#00004b;font-size:14px;cursor:pointer;z-index:15;}
+.back-link:hover{text-decoration:underline;}
+.page-title{position:absolute;top:28px;width:100%;text-align:center;color:#46145a;font-size:29px;font-weight:bold;z-index:15;}
+.setting-row{display:flex;align-items:center;margin:8px 0;padding:0 20px;}
+.setting-label{color:#00004b;font-size:14px;min-width:180px;}
+/* ===== 魂环图片(img标签) ===== */
+.soul-ring-img{position:absolute;z-index:12;pointer-events:none;}
+/* ===== 武魂格子 ===== */
+.wuhun-box{position:absolute;width:120px;height:30px;border:2px solid #000;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;z-index:12;}
+/* ===== 启动页 ===== */
+.startup-title{position:absolute;top:240px;width:100%;text-align:center;color:#00004b;font-size:29px;font-weight:bold;}
+.startup-sub{position:absolute;width:100%;text-align:center;color:#00004b;font-size:14px;}
+.startup-hint{position:absolute;width:100%;text-align:center;color:#00004b;font-size:13px;bottom:70px;}
+.scroll-list{overflow-y:auto;max-height:500px;}
+</style>
+</head>
+<body>
+<div id="app">
+<!-- 背景图 (img标签加载) -->
+<img id="bg-img" src="2.png" alt="" onerror="this.style.background='linear-gradient(135deg,#1a1030,#2a1840,#1a1030)'">
+
+<!-- ===== STARTUP ===== -->
+<div id="page-startup" class="panel-ui1" style="cursor:pointer;">
+  <div class="startup-title">斗罗转盘辅助UI</div>
+  <div class="startup-sub" style="top:280px;">二创内容，切勿与原著混淆</div>
+  <div class="startup-sub" style="top:300px;color:#dc004b;">仅支持斗罗1 人类魂师 剧情</div>
+  <div class="startup-sub" style="top:560px;">须配合转盘使用</div>
+  <div class="startup-sub" style="top:580px;font-size:12px;">UI制作：@花雨桐</div>
+  <div class="startup-hint">单击任意处开始模拟</div>
+  <div class="btn" style="position:absolute;right:30px;bottom:50px;width:150px;height:45px;font-size:16px;" onclick="event.stopPropagation();goToPage('进程存档');">读档</div>
+  <div class="btn" style="position:absolute;right:30px;bottom:0;width:150px;height:45px;font-size:16px;" onclick="event.stopPropagation();goToPage('设置');">设置</div>
+</div>
+
+<!-- ===== SETTINGS ===== -->
+<div id="page-settings" class="panel-ui1 hidden">
+  <div class="back-link" onclick="goToPage('启动页面')">＜ 返回</div>
+  <div style="padding:60px 20px 20px;">
+    <div class="setting-row"><span class="setting-label">初始设定阶段自动记录</span><div class="toggle" id="tog-auto" onclick="toggleSetting('auto')">[开]</div></div>
+    <div class="setting-row"><span class="setting-label">自接api设置</span><div class="btn btn-pink" style="width:90px;height:30px;" onclick="goToPage('api设置')">＞＞＞</div></div>
+    <div style="text-align:center;color:#787878;padding:20px 0;">-------- 自定义变量导入 --------</div>
+    <div class="setting-row"><span class="setting-label">变量导入方向</span><div><div class="slider-opt" id="sld-back" style="background:#a8e6aa;" onclick="setImportDir('向后')">向后</div><div class="slider-opt" id="sld-fwd" style="background:#c8c8d2;" onclick="setImportDir('向前')">向前</div></div></div>
+    <div class="setting-row"><span class="setting-label">导入留空间隔</span><div class="toggle toggle-off" id="tog-gap" onclick="toggleSetting('gap')">[关]</div></div>
+    <div class="setting-row"><span class="setting-label">读取前自动缓存</span><div class="toggle toggle-off" id="tog-cache" onclick="toggleSetting('cache')">[关]</div></div>
+    <div class="setting-row"><span class="setting-label">虚拟机器码</span><div class="toggle toggle-off" id="tog-vm" onclick="toggleSetting('vm')">[关]</div></div>
+  </div>
+</div>
+
+<!-- ===== API SETTINGS ===== -->
+<div id="page-api" class="panel-ui1 hidden">
+  <div class="back-link" onclick="goToPage('设置')">＜ 返回</div>
+  <div style="padding:50px 20px 20px;">
+    <div class="setting-row"><span class="setting-label">模型配置</span><div class="btn btn-blue" id="api-off" style="width:110px;height:30px;" onclick="setApiMode('官方')">官方模型</div><div class="btn" id="api-cus" style="width:110px;height:30px;margin-left:10px;" onclick="setApiMode('自定义')">自定义模型</div></div>
+    <div class="setting-row" id="api-vendor-row"><span class="setting-label">模型厂商</span><div id="vendor-btns" style="display:flex;flex-wrap:wrap;gap:4px;"></div></div>
+    <div class="setting-row" id="api-addr-row" style="display:none;"><span class="setting-label">模型地址</span><input type="text" id="api-addr-input" style="width:430px;height:28px;font-size:13px;" onchange="api_地址=this.value"></div>
+    <div class="setting-row"><span class="setting-label">密钥</span><input type="password" id="api-key-input" style="width:330px;height:28px;font-size:13px;" onchange="api_密钥=this.value"><div class="btn" style="width:100px;height:30px;margin-left:10px;background:rgba(160,80,180,0.7);color:#fff;" onclick="detectVendor()">检测厂商</div></div>
+    <div class="setting-row" id="api-model-row"><span class="setting-label" id="api-model-lbl">选择模型</span><div id="api-model-dsp" class="btn" style="width:330px;height:30px;background:rgba(255,235,205,0.47);cursor:pointer;" onclick="cycleModel()"></div></div>
+    <div style="text-align:center;color:#00004b;padding:15px 0;">--------高级设置--------</div>
+    <div id="api-adv"></div>
+    <div style="text-align:center;padding:12px;">
+      <div class="btn btn-blue" style="width:140px;height:36px;" onclick="testApi()">测试api</div>
+      <div class="btn btn-green" id="api-save-btn" style="width:120px;height:36px;margin-left:20px;display:none;" onclick="goToPage('设置')">保存并退出</div>
+      <div class="btn" style="width:110px;height:36px;margin-left:20px;" onclick="exportApiConfig()">导出配置</div>
+      <div class="btn" style="width:110px;height:36px;margin-left:10px;" onclick="document.getElementById('api-cfg-file').click()">导入配置</div>
+      <input type="file" id="api-cfg-file" accept=".json" style="display:none;" onchange="importApiConfig(this)">
+    </div>
+    <div id="api-status" style="text-align:center;color:#828282;padding:5px;">测试api需要使用部分额度，请知晓</div>
+  </div>
+</div>
+
+<!-- ===== MAIN PAGE ===== -->
+<div id="page-main" class="hidden" style="position:absolute;left:0;top:0;width:1280px;height:720px;">
+  <div class="panel-left">
+    <div class="debug-area" id="debug-area"></div>
+    <div class="grid-12" id="opt-grid"></div>
+    <div class="input-bar">输入内容 <span id="input-display"></span></div>
+    <input type="text" class="text-input" id="main-input" placeholder="在此输入..." onkeydown="if(event.key==='Enter'){handleInput(this.value);this.value='';}">
+  </div>
+  <div class="panel-mid">
+    <div class="panel-mid-top"></div>
+    <div class="panel-mid-bot"></div>
+    <div class="panel-mid-line"></div>
+    <div class="mid-info" id="mid-info"></div>
+  </div>
+  <!-- 魂环图片容器 -->
+  <div id="soul-ring-container" style="position:absolute;left:420px;top:310px;width:410px;height:410px;z-index:11;pointer-events:none;"></div>
+  <!-- 武魂格子 -->
+  <div id="wuhun-display"></div>
+  <div class="panel-right"><div class="chronicle" id="chronicle"></div></div>
+  <div class="panel-topbar"><div class="topbar-text" id="topbar-info"></div></div>
+</div>
+
+<!-- ===== AI CONTINUATION ===== -->
+<div id="page-ai" class="panel-ui1 hidden">
+  <div class="page-title">ai续写转盘选项</div>
+  <div style="text-align:center;color:#dc7800;padding:60px 0 10px;font-size:14px;">ai续写转盘需要花费大量token，请阁下慎重</div>
+  <div style="text-align:center;padding:10px;"><div class="btn btn-blue" id="ai-start-btn" style="width:200px;height:42px;font-size:15px;" onclick="startAi()">开始续写</div></div>
+  <div id="ai-status" style="text-align:center;padding:10px;font-size:14px;">状态：未开始</div>
+  <div id="ai-question" style="text-align:center;padding:10px;color:#dc004b;font-size:14px;min-height:30px;"></div>
+  <div id="ai-options" style="padding:10px 90px;"></div>
+  <div style="position:absolute;bottom:100px;width:100%;text-align:center;display:flex;justify-content:center;gap:20px;">
+    <div class="btn" style="width:120px;height:42px;" onclick="goToPage('main');">返回</div>
+    <div class="btn btn-green" style="width:120px;height:42px;" onclick="writeAiResult()">写入</div>
+    <div class="btn" style="width:120px;height:42px;background:rgba(210,140,40,0.51);" onclick="exportAiResult()">导出</div>
+  </div>
+  <div style="position:absolute;bottom:60px;width:100%;text-align:center;color:#828282;font-size:13px;">续写完成后：点击选项把题目与答案记入大事年表</div>
+</div>
+
+<!-- ===== CUSTOM VARIABLES ===== -->
+<div id="page-vars" class="panel-ui1 hidden">
+  <div class="page-title">自定义变量</div>
+  <div style="text-align:center;color:#828282;padding:55px 0 5px;font-size:12px;">最多32个变量，分2页；显示槽提示语支持{变量名}、[序号]嵌入值</div>
+  <div style="display:flex;padding:10px;">
+    <div style="width:340px;" id="var-list"></div>
+    <div style="flex:1;padding-left:20px;" id="var-editor"></div>
+  </div>
+  <div id="var-slots" style="position:absolute;left:390px;top:440px;width:860px;"></div>
+  <div style="position:absolute;bottom:20px;width:100%;text-align:center;display:flex;justify-content:center;gap:10px;">
+    <div class="btn btn-blue" style="width:120px;height:36px;" onclick="newVar()">新建变量</div>
+    <div class="btn" style="width:120px;height:36px;" onclick="goToPage('main');">返回</div>
+    <div class="btn" style="width:120px;height:36px;" onclick="goToPage('存读档');">导出/导入</div>
+  </div>
+</div>
+
+<!-- ===== SLOT DETAIL ===== -->
+<div id="page-detail" class="panel-ui1 hidden">
+  <div class="page-title" id="detail-title">显示槽详情</div>
+  <div style="padding:80px 40px;font-size:14px;"><div id="detail-source" style="margin-bottom:20px;white-space:pre-wrap;word-break:break-all;"></div><div id="detail-result" style="white-space:pre-wrap;word-break:break-all;"></div></div>
+  <div style="position:absolute;bottom:20px;left:40px;"><div class="btn" style="width:120px;height:36px;" onclick="goToPage('自设变量');">返回</div></div>
+</div>
+
+<!-- ===== SAVE/LOAD ===== -->
+<div id="page-saveload" class="panel-ui1 hidden">
+  <div class="page-title">自定义变量存读档</div>
+  <div class="back-link" onclick="goToPage('自设变量')">＜ 返回</div>
+  <div style="padding:70px 40px 10px;">
+    <div style="color:#00004b;font-size:14px;">网页版存读档：导出会下载 json 文件到电脑，导入从本地文件读取</div>
+    <div style="display:flex;align-items:center;margin:16px 0;flex-wrap:wrap;gap:8px;">
+      <span style="color:#00004b;">存档名称</span>
+      <input type="text" id="save-name-input" style="width:220px;height:28px;font-size:13px;" value="">
+      <div class="btn btn-blue" style="height:30px;" onclick="exportSave()">导出存档(下载)</div>
+      <div class="btn btn-green" style="height:30px;" onclick="document.getElementById('save-import-file').click()">导入存档(读取)</div>
+      <input type="file" id="save-import-file" accept=".json,application/json" style="display:none;" onchange="importSave(this)">
+    </div>
+    <div style="color:#00004b;font-size:13px;margin:6px 0;">本机（localStorage）已有存档</div>
+    <div id="sl-list" class="scroll-list" style="max-height:300px;border:1px solid #ccc;"></div>
+    <div id="save-msg" style="margin-top:10px;font-size:13px;color:#1e8e00;min-height:20px;"></div>
+    <div style="text-align:right;margin-top:14px;display:flex;justify-content:flex-end;gap:10px;">
+      <div class="btn" style="width:110px;height:36px;" onclick="goToPage('自设变量')">返回</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROCESS SAVE ===== -->
+<div id="page-process" class="panel-ui1 hidden">
+  <div class="page-title">进程存档</div>
+  <div class="back-link" onclick="goBackProcess()">＜ 返回</div>
+  <div style="padding:70px 40px 10px;">
+    <div style="color:#00004b;font-size:13px;">保存/读取当前进程：明文存时间·魂力·位置，机器码绑定设备+槽位，对不上即损坏</div>
+    <div id="proc-summary" style="text-align:center;margin:15px 0;font-size:13px;color:#1e1e1e;"></div>
+    <div style="text-align:center;margin:10px 0;"><div class="btn btn-blue" style="width:140px;height:40px;" onclick="saveProcess()">保存存档</div></div>
+    <div style="color:#00004b;margin:10px 0;">槽位:</div>
+    <div id="proc-slots" style="display:flex;gap:8px;margin-bottom:10px;"></div>
+    <div style="color:#00004b;margin:8px 0;" id="proc-list-title">存档列表</div>
+    <div id="proc-list" class="scroll-list" style="max-height:280px;"></div>
+    <div style="text-align:center;margin-top:10px;display:flex;justify-content:center;gap:12px;">
+      <div class="btn btn-pink" style="width:120px;height:36px;" onclick="goToPage('移除绑定')">移除绑定</div>
+      <div class="btn" style="width:120px;height:36px;" onclick="goBackProcess()">返回</div>
+    </div>
+    <div id="proc-msg" style="text-align:center;margin-top:8px;font-size:12px;color:#828282;"></div>
+  </div>
+</div>
+
+<!-- ===== UNBIND ===== -->
+<div id="page-unbind" class="panel-ui1 hidden">
+  <div class="page-title">解除设备绑定</div>
+  <div class="back-link" onclick="goToPage('进程存档')">＜ 返回</div>
+  <div style="padding:100px 40px;">
+    <div style="color:#00004b;font-size:14px;">移除 进程存档/ 与 自定义存档/ 下全部存档密文中的机器码</div>
+    <div style="color:#961e3c;margin:20px 0;">请输入密码（提示：雨花石大写_初中班级学号4位）</div>
+    <div style="font-size:14px;">当前输入：<span id="unbind-input-dsp" style="color:#1e1e1e;">（请在底部输入区输入密码）</span></div>
+    <div style="text-align:center;margin-top:30px;"><div class="btn btn-blue" style="width:140px;height:40px;" onclick="移除绑定_提示='密码验证功能（模拟）';renderUnbindPage();">确认密码</div></div>
+    <div id="unbind-msg" style="text-align:center;margin-top:20px;font-size:13px;color:#828282;"></div>
+  </div>
+</div>
+
+<!-- ===== 常驻提示（#app 窗口内底部，恒定显示；goToPage不会隐藏它） ===== -->
+<div id="bar-tips" style="position:absolute;left:0;bottom:0;width:1280px;height:18px;z-index:2147483000;pointer-events:none;">
+  <div style="position:absolute;left:0;top:0;width:1280px;height:18px;display:flex;align-items:center;justify-content:center;">
+    <span style="color:rgba(245,235,255,0.95);font-size:11px;letter-spacing:1px;text-shadow:0 0 3px #000;">部分功能无法使用，请谅解</span>
+  </div>
+  <div style="position:absolute;right:6px;top:0;height:18px;display:flex;align-items:center;white-space:nowrap;">
+    <span style="color:rgba(230,210,255,0.98);font-size:10px;letter-spacing:0.5px;text-shadow:0 0 3px #000;">版本0.0.4-内测　部署：260904</span>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ============================================================
+// 图片配置 (JSON静态控制)
+// ============================================================
+const IMG_CONFIG = {
+  background: "2.png",
+  ui_year: "ui_year.png",
+  soulRings: {
+    "十年": "魂环s/2/十年魂环.png",
+    "百年": "魂环s/2/百年魂环.png",
+    "千年": "魂环s/2/千年魂环.png",
+    "万年": "魂环s/2/万年魂环.png",
+    "十万年": "魂环s/2/十万年魂环.png",
+    "二十万年": "魂环s/2/二十万年.png",
+    "百万年": "魂环s/2/百万年魂环.png"
+  },
+  soulRingsSpecial: {
+    "三彩":"魂环s/2/特殊/三彩.png","天蓝":"魂环s/2/特殊/天蓝.png","暗灰":"魂环s/2/特殊/暗灰.png",
+    "桐木":"魂环s/2/特殊/桐木.png","梅紫":"魂环s/2/特殊/梅紫.png","浅绿":"魂环s/2/特殊/浅绿.png",
+    "海蓝":"魂环s/2/特殊/海蓝.png","淡绿":"魂环s/2/特殊/淡绿.png","竹绿":"魂环s/2/特殊/竹绿.png",
+    "蓝金":"魂环s/2/特殊/蓝金.png","银白":"魂环s/2/特殊/银白.png"
+  },
+  yearToImage: function(y) {
+    if(y<100) return this.soulRings["十年"];
+    if(y<1000) return this.soulRings["百年"];
+    if(y<10000) return this.soulRings["千年"];
+    if(y<100000) return this.soulRings["万年"];
+    if(y<1000000) return this.soulRings["十万年"];
+    if(y<2000000) return this.soulRings["二十万年"];
+    return this.soulRings["百万年"];
+  },
+  yearToColor: function(y) {
+    if(y<100) return '#7CFC00';
+    if(y<1000) return '#87CEFA';
+    if(y<10000) return '#CD9B1D';
+    if(y<100000) return '#A020F0';
+    if(y<300000) return '#000000';
+    if(y<1000000) return '#FF0000';
+    return '#FFA500';
+  },
+  yearToName: function(y) {
+    if(y<100) return "十年";
+    if(y<1000) return "百年";
+    if(y<10000) return "千年";
+    if(y<100000) return "万年";
+    if(y<1000000) return "十万年";
+    if(y<2000000) return "二十万年";
+    return "百万年";
+  }
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let page='启动页面', display_ui=1, shuru='', choice=-1;
+let main_display_choices='性别';
+let 设置_初始设定阶段自动记录=1, 设置_变量导入方向='向后', 设置_导入留空=0, 设置_读取前缓存=0, 设置_虚拟机器码=0;
+let api_模式='官方', api_厂商='deepseek', api_密钥='', api_模型='deepseek-v4-flash', api_地址='';
+let api_随机性=0.7, api_最大输出=2048, api_核采样=1, api_话题新鲜度=0, api_重复惩罚=1.1;
+let api_测试状态='', api_可以保存=false, api_检测状态='无';
+let 类别='',性别='',时间=2631,年龄=0,颜值=0;
+let 武魂=["","","","","",""],武魂类别=["","","","","",""],武魂数量=0;
+let 魂环1=[],魂环2=[],魂环3=[],魂环4=[],魂环5=[],魂环6=[];
+let 十年魂骨=0,百年魂骨=0,千年魂骨=0,万年魂骨=0,十万年魂骨=0,外附魂骨=0;
+let 魂力=0,魂力上限=99,精神力=0,体质=0,财富=0;
+let 势力='',坐标='',信仰之力=0,亲和度=-1,神考='',神位='无';
+let 记录=["年份%#R初始设定"],撤回暂存='';
+let 进程_初始设定完成=0, display_soul=1;
+let 自定义变量=[],自定义槽=["","","","",""],自设_页=1,自设_选中=-1,自设_详情槽=0;
+let 存读档_名称='',存读档_排序='时间';
+let 进程存档_槽=0,进程存档_来源='启动页面',进程存档_提示='';
+let 移除绑定_提示='';
+let ai续写_状态='未开始',ai续写_题目='',ai续写_选项=[];
+let _状态_bool_时间年龄同步=0;
+let 选择性忽略低品质魂环区间=[1,0.95,0.9025,0.8573,0.8145,0.7737,0.7350,0.6983,0.6634,0.6302];
+let 最终获取的魂环年份=0,吸收概率=5;
+let 颜值表=["F级-7","F级-6","F级-5","F级-4","F级-3","F级-2","F级-1","F级","E级","D级","C级","B级","A级","S级","SS级","炸天级"];
+
+// ============================================================
+// OPTIONS DICT
+// ============================================================
+const options={
+"主页":["  传送","","","","#Z  魂环","#O  魂骨","","#R武魂觉醒","#R[存档]","","","#B1/3"],
+"主页2":["#Rai续写","","#R撤回年表","#B加回年表","#Z自设变量","","","","","","","#B2/3"],
+"主页3":["#R加入势力","","","","","","","","","","","#B3/3"],
+"加入势力1":[" 天斗帝国"," 星罗帝国"," 昊天宗","七宝琉璃","蓝电霸王"," 白虎宗"," 风剑宗"," 象甲宗"," 火豹宗"," 武魂殿","","#B1/3"],
+"加入势力2":["史莱克","天斗皇家"," 天水学院"," 神风学院"," 炽火学院"," 雷霆学院"," 苍晖学院"," 象甲学院"," 海神岛"," 杀戮之都","","#B2/3"],
+"加入势力3":[" 日月帝国","星罗帝国"," 天魂帝国"," 斗灵帝国"," 明德堂","  唐门"," 本体宗"," 圣灵教"," 传灵塔","史莱克","","#B3/3"],
+"性别":["#c000000120男","#c120030030女","#c120060000双性","#c120120120无性","#c000000120雄","#c120030030雌","#c120060000雌雄同体","#c120120120非雌非雄","斗罗大陆(切换)","","","#R请抽取性别"],
+"穿越时期":["唐晨时代","比比东青年","前10年","穿越前","刚出生","6岁","12岁","魂师大赛","七怪分别","七怪重聚","海神岛","神战","#R请抽取穿越时期"],
+"年龄":["0","6","12","15","18","25","40","50","80","100","","","#R请抽取年龄"],
+"颜值":["F","E","D","C","B","A","S","SS","炸天","","","#R请抽取颜值"],
+"出生地1":["星罗帝国","天斗帝国","海外","邪魔森林","明都","天斗城","星罗城","索托城","日月帝国","圣魂村","","#B1/3","#R请选择出生地"],
+"出生地2":["蓝电霸王龙","七宝琉璃宗","昊天宗","杀戮之都","落日森林","极北之地","星斗大森林","武魂殿","海神岛","瀚海城","","#B2/3","#R请选择出生地"],
+"出生地3":["冰海","明斗山脉","诺丁城","武魂城","史莱克城","天魂帝国","斗灵帝国","奥克城","东阳城","景阳山脉","","#B3/3","#R请选择出生地"],
+"魂兽穿越时期":["斗罗元年","2000","1500","1200","1000","800","600","400","200","100","前50年","前20年","#R魂兽：请抽取穿越时期"],
+"新武魂":["植物武魂","器武魂","兽武魂","极致","变异","本体","邪灵","神级","食物","","","#R请在输入区输入武魂，然后点击下方类别"],
+"魂骨":["十年","百年","千年","万年","十万年","","外附魂骨","","","","","#H我点错了"],
+"坐标1":["星罗帝国","天斗帝国","海外","邪魔森林","明都","天斗城","星罗城","索托城","日月帝国","圣魂村","","#B1/3"],
+"坐标2":["蓝电霸王龙","七宝琉璃","昊天宗","杀戮之都","落日森林","极北之地","星斗大森林","武魂殿","海神岛","瀚海城","","#B2/3"],
+"坐标3":["冰海","明斗山脉","诺丁城","武魂城","史莱克城","天魂帝国","斗灵帝国","奥克城","东阳城","景阳山脉","","#B3/3"],
+"魂环10":["10","100","200","300","400","423","424","500","600","775","850","#B献祭/#R指定","#R请抽取10级体质魂环"],
+"魂环20":["10","100","400","700","764","765","800","900","1000","1500","1667","#B献祭/#R指定","#R请抽取20级体质魂环"],
+"魂环30":["10","100","600","1000","1760","1761","2000","2200","2400","2700","2889","#B献祭/#R指定","#R请抽取30级体质魂环"],
+"魂环40":["10","100","1000","3000","5000","5001","6000","7000","8000","10000","10500","#B献祭/#R指定","#R请抽取40级体质魂环"],
+"魂环50":["100","1000","5000","10000","12000","12001","20000","25000","30000","33000","34000","#B献祭/#R指定","#R请抽取50级体质魂环"],
+"魂环60":["4000","10000","15000","20000","20001","25000","30000","35000","40000","44000","46889","#B献祭/#R指定","#R请抽取60级体质魂环"],
+"魂环70":["8888","10000","25000","38000","50000","50001","57000","63000","70000","76000","81000","#B献祭/#R指定","#R请抽取70级体质魂环"],
+"魂环80":["10000","25000","38000","50000","60000","70000","70001","77778","84665","91332","100000","#B献祭/#R指定","#R请抽取80级体质魂环"],
+"魂环85":["25000","38000","50000","60000","70000","80000","80001","87000","94332","100000","125000","#B献祭/#R指定","#R请抽取85级体质魂环"],
+"魂环90":["10","100","1000","10000","50000","80000","100000","130000","160000","180000","200000","#B献祭/#R指定","#R请抽取90级体质魂环"],
+"魂环95":["10","100","1000","10000","70000","100000","130000","160000","180000","200000","205000","#B献祭/#R指定","#R请抽取95级体质魂环"],
+"魂环99":["10","100","1000","10000","100000","160000","200000","210000","220000","230000","235000","#B献祭/#R指定","#R请抽取99级体质魂环"],
+"魂环100":["1000","10000","100000","200000","220000","240000","260000","280000","300000","305000","308000","#B献祭/#R指定","#R请抽取100级体质魂环"],
+"附加武魂":["","","","","","","","#R放弃附加","","","","",""],
+"普通越级魂环":["#R成功","#R成功+1","#R成功+2","","#Z逃跑","#Z打伤","#Z反噬-1","#Z反噬-2","","","",""],
+"十万年越级魂环":["#R成功","#R成功+2","#R成功+4","","#Z逃跑","#Z失败-4","#Z失败-8","","","","",""],
+"十万年献祭":["红","2金","3金","4金","5金","6金","7金","8金","9金","白金/赤金/橙金","橙金","#Z自定义","#x-=011自定义魂环年限请输入魂环年限后点击[自定义]"]
+};
+const _势力表={"加入势力1":["天斗帝国","星罗帝国","昊天宗","七宝琉璃宗","蓝电霸王龙宗","白虎宗","风剑宗","象甲宗","火豹宗","武魂殿"],"加入势力2":["史莱克学院","天斗皇家学院","天水学院","神风学院","炽火学院","雷霆学院","苍晖学院","象甲学院","海神岛","杀戮之都"],"加入势力3":["日月帝国","星罗帝国","天魂帝国","斗灵帝国","明德堂","唐门","本体宗","圣灵教","传灵塔","史莱克学院"]};
+const _坐标表={"坐标1":["星罗帝国","天斗帝国","海外","邪魔森林","明都","天斗城","星罗城","索托城","日月帝国","圣魂村"],"坐标2":["蓝电霸王龙宗","七宝琉璃宗","昊天宗","杀戮之都","落日森林","极北之地","星斗大森林","武魂殿","海神岛","瀚海城"],"坐标3":["冰海","明斗山脉","诺丁城","武魂城","史莱克城","天魂帝国","斗灵帝国","奥克城","东阳城","景阳山"]};
+
+// ============================================================
+// RICH TEXT
+// ============================================================
+// ============================================================
+// RICH TEXT (dlc.moutput 控制码解析)
+//   颜色简码: #R红 #B蓝 #G绿 #H橙 #Z紫 #O亮橙(参考dlc.py)
+//   自定义色: #cRRRGGGBBB — 9位十进制, 每3位一组 → rgb(R,G,B)
+//   其他码:   #n换行  ###重置  #0/#1/#2字号  #x±=N/#y±=N偏移  #tm=N字体
+// ============================================================
+const _colorMap={R:'#ff0000',B:'#0000ff',G:'#00aa00',H:'#ff8000',Z:'#da70d6',O:'#ff8200'};
+
+// 计算从 text[i]('#'处)开始的控制码总长; 非控制码返回0
+function _ctrlLen(text,i){
+    if(text[i]!=='#') return 0;
+    const r=text.slice(i+1);
+    if(!r) return 0;
+    if('RBGHZO'.includes(r[0])) return 2;               // #X 2字符
+    if(r[0]==='c'){
+        const m=r.slice(1).match(/^\d{9}/);             // 原版固定9位十进制
+        if(m) return 11;                                 // #c + 9位 = 11字符
+        return 0;
+    }
+    if(r[0]==='n') return 2;                             // #n
+    if(r.startsWith('###')) return 4;                    // ###
+    if(r[0]>='0'&&r[0]<='2') return 2;                   // #0 #1 #2
+    let m;
+    if((m=r.match(/^[xy][+-]=\d+/))) return 1+m[0].length;   // #x+=N #y-=N
+    if((m=r.match(/^tm=\d+/))) return 1+m[0].length;         // #tm=N
+    return 0;
+}
+// 解析 #cRRRGGGBBB (text[i]='#') → "rgb(r,g,b)"; 非此格式返回null
+function _parseColorC9(text,i){
+    const r=text.slice(i+1);
+    if(r[0]!=='c') return null;
+    const m=r.slice(1).match(/^(\d{3})(\d{3})(\d{3})/);
+    if(!m) return null;
+    let R=parseInt(m[1],10),G=parseInt(m[2],10),B=parseInt(m[3],10);
+    R=Math.min(R,255);G=Math.min(G,255);B=Math.min(B,255);
+    return `rgb(${R},${G},${B})`;
+}
+
+function renderMoutputHTML(text,def) {
+    if(!text) return '';
+    let h='',sp=false,i=0;
+    while(i<text.length){
+        if(text[i]==='#'){
+            const L=_ctrlLen(text,i);
+            if(L>0){
+                const code=text.slice(i,i+L);
+                const ch=code[1];
+                if(_colorMap[ch]){
+                    if(sp)h+='</span>';
+                    h+=`<span style="color:${_colorMap[ch]};">`;sp=true;
+                }else if(ch==='c'){
+                    const rgb=_parseColorC9(text,i);
+                    if(rgb){if(sp)h+='</span>';h+=`<span style="color:${rgb};">`;sp=true;}
+                    // 解析失败→当普通字符, i不前进(下方兜底)
+                    else{i++;continue;}
+                }else if(code==='###'){
+                    if(sp)h+='</span>';sp=false;
+                }else if(ch==='n'){
+                    h+='<br>';
+                }
+                // #0/#1/#2 字号、#x/#y偏移、#tm字体 → 无HTML对应, 直接忽略
+                i+=L;continue;
+            }
+            // 无法识别的# → 普通字符
+            h+=escHtml('#');
+            i++;continue;
+        }
+        h+=escHtml(text[i]);i++;
+    }
+    if(sp)h+='</span>';return h;
+}
+function stripRichText(t){
+    if(!t)return'';
+    let r='',i=0;
+    while(i<t.length){
+        if(t[i]==='#'){
+            const L=_ctrlLen(t,i);
+            if(L>0){i+=L;continue;}
+            i++;continue;   // 未知#丢弃
+        }
+        r+=t[i];i++;
+    }
+    return r;
+}
+function getRichColor(t){
+    if(!t)return null;
+    for(let k of Object.keys(_colorMap)){if(t.includes('#'+k))return _colorMap[k];}
+    let m=t.match(/#c(\d{9})/);
+    if(m){
+        const R=Math.min(parseInt(m[1].substring(0,3),10),255);
+        const G=Math.min(parseInt(m[1].substring(3,6),10),255);
+        const B=Math.min(parseInt(m[1].substring(6,9),10),255);
+        return `rgb(${R},${G},${B})`;
+    }
+    return null;
+}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function goToPage(p){
+    page=p;
+    // 只隐藏具体页面容器，避免误伤 bg-img 与底部常驻提示栏 #bar-tips
+    ['page-startup','page-settings','page-api','page-main','page-ai','page-vars','page-detail','page-saveload','page-process','page-unbind'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el)el.classList.add('hidden');
+    });
+    switch(p){
+        case'启动页面':document.getElementById('page-startup').classList.remove('hidden');break;
+        case'设置':document.getElementById('page-settings').classList.remove('hidden');updateSettingsUI();break;
+        case'api设置':document.getElementById('page-api').classList.remove('hidden');updateApiUI();break;
+        case'main':document.getElementById('page-main').classList.remove('hidden');display_ui=2;renderMainPage();break;
+        case'ai续写转盘选项':document.getElementById('page-ai').classList.remove('hidden');renderAiPage();break;
+        case'自设变量':document.getElementById('page-vars').classList.remove('hidden');renderVarsPage();break;
+        case'显示槽详情':document.getElementById('page-detail').classList.remove('hidden');renderSlotDetail();break;
+        case'存读档':document.getElementById('page-saveload').classList.remove('hidden');renderSaveLoadPage();break;
+        case'进程存档':document.getElementById('page-process').classList.remove('hidden');renderProcessPage();break;
+        case'移除绑定':document.getElementById('page-unbind').classList.remove('hidden');renderUnbindPage();break;
+    }
+}
+document.getElementById('page-startup').addEventListener('click',function(e){if(e.target.closest('.btn'))return;main_display_choices='性别';进程_初始设定完成=0;goToPage('main');});
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function toggleSetting(n){switch(n){case'auto':设置_初始设定阶段自动记录=1-设置_初始设定阶段自动记录;break;case'gap':设置_导入留空=1-设置_导入留空;break;case'cache':设置_读取前缓存=1-设置_读取前缓存;break;case'vm':设置_虚拟机器码=1-设置_虚拟机器码;break;}updateSettingsUI();}
+function setImportDir(d){设置_变量导入方向=d;updateSettingsUI();}
+function updateSettingsUI(){setT('tog-auto',设置_初始设定阶段自动记录);setT('tog-gap',设置_导入留空);setT('tog-cache',设置_读取前缓存);setT('tog-vm',设置_虚拟机器码);document.getElementById('sld-back').style.background=设置_变量导入方向==='向后'?'#a8e6aa':'#c8c8d2';document.getElementById('sld-fwd').style.background=设置_变量导入方向==='向前'?'#a8e6aa':'#c8c8d2';}
+function setT(id,v){const e=document.getElementById(id);if(!e)return;e.className='toggle '+(v?'toggle-on':'toggle-off');e.textContent=v?'[开]':'[关]';}
+
+// ============================================================
+// API
+// ============================================================
+const 厂商昵称表={"大肥鱼":"deepseek","毛线团":"openai","Moonshot":"moonshot","千问":"qwen","GLM":"glm","糖包":"doubao","小米MIMO":"xiaomimimo"};
+const 官方模型列表={"deepseek":["deepseek-v4-flash","deepseek-v4-pro"],"openai":["gpt-4o","gpt-4o-mini"],"moonshot":["kimi-latest"],"qwen":["qwen-turbo","qwen-plus"],"glm":["glm-4-flash"],"doubao":["doubao-1.5-pro-32k"],"xiaomimimo":["mimo-v2-pro","mimo-v2.5-pro"]};
+function setApiMode(m){api_模式=m;updateApiUI();}
+function detectVendor(){api_检测状态='检测中';updateApiUI();setTimeout(()=>{api_检测状态='完成';updateApiUI();},1500);}
+function cycleModel(){const ms=官方模型列表[api_厂商]||[];const i=ms.indexOf(api_模型);api_模型=ms[(i+1)%ms.length];updateApiUI();}
+function testApi(){api_测试状态='校验中';updateApiUI();setTimeout(()=>{api_测试状态='成功';api_可以保存=true;updateApiUI();},2000);}
+function updateApiUI(){
+    document.getElementById('api-off').className=api_模式==='官方'?'btn btn-blue':'btn';
+    document.getElementById('api-cus').className=api_模式==='自定义'?'btn btn-blue':'btn';
+    document.getElementById('api-vendor-row').style.display=api_模式==='官方'?'flex':'none';
+    document.getElementById('api-addr-row').style.display=api_模式==='自定义'?'flex':'none';
+    const vb=document.getElementById('vendor-btns');vb.innerHTML='';
+    for(let[nick,real]of Object.entries(厂商昵称表)){const b=document.createElement('div');b.className='btn'+(api_厂商===real?' btn-blue':'');b.style.cssText='width:110px;height:28px;font-size:12px;';b.textContent=nick;b.onclick=()=>{api_厂商=real;api_模型=(官方模型列表[real]||[''])[0];updateApiUI();};vb.appendChild(b);}
+    const ki=document.getElementById('api-key-input');if(ki&&!ki.matches(':focus'))ki.value=api_密钥;
+    const ai=document.getElementById('api-addr-input');if(ai&&!ai.matches(':focus'))ai.value=api_地址;
+    const mdl=document.getElementById('api-model-dsp');
+    if(api_模式==='官方'){mdl.textContent=api_模型;}else{mdl.innerHTML='<input type="text" style="width:100%;border:none;background:transparent;font-size:13px;" value="'+escHtml(api_模型)+'" onchange="api_模型=this.value">';}
+    // 高级参数（可编辑输入框 + 恢复默认）
+    const adv=document.getElementById('api-adv');adv.innerHTML='';
+    [['随机性','api_随机性',api_随机性],['最大输出','api_最大输出',api_最大输出],['核采样','api_核采样',api_核采样],['话题新鲜度','api_话题新鲜度',api_话题新鲜度],['重复惩罚','api_重复惩罚',api_重复惩罚]].forEach(([n,varName,v])=>{
+        adv.innerHTML+=`<div class="setting-row"><span class="setting-label">${n}</span><input type="text" style="width:200px;height:26px;font-size:13px;" value="${v}" onchange="try{${varName}=parseFloat(this.value)}catch(e){}"></div>`;
+    });
+    document.getElementById('api-save-btn').style.display=api_可以保存?'inline-flex':'none';
+    const st=document.getElementById('api-status');
+    if(api_测试状态==='成功')st.innerHTML='<span style="color:#00aa00;">#G测试成功，单击保存并退出</span>';
+    else if(api_测试状态==='校验中')st.textContent='校验中...请稍后';
+    else st.textContent='测试api需要使用部分额度，请知晓';
+}
+// 导出/导入 API 配置（json文件）
+function apiConfigJSON(){
+    return JSON.stringify({模式:api_模式,厂商:api_厂商,地址:api_地址,密钥:api_密钥,模型:api_模型,随机性:api_随机性,最大输出:api_最大输出,核采样:api_核采样,话题新鲜度:api_话题新鲜度,重复惩罚:api_重复惩罚},null,2);
+}
+function exportApiConfig(){
+    const blob=new Blob([apiConfigJSON()],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='斗罗ai配置.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    api_测试状态='配置已导出';updateApiUI();
+    document.getElementById('api-status').textContent='配置已导出为 json 文件';
+}
+function importApiConfig(input){
+    const f=input.files[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=()=>{try{
+        const d=JSON.parse(rd.result);
+        if(d.模式)api_模式=d.模式;
+        if(d.厂商)api_厂商=d.厂商;
+        if(d.地址!==undefined)api_地址=d.地址;
+        if(d.密钥!==undefined)api_密钥=d.密钥;
+        if(d.模型)api_模型=d.模型;
+        if(d.随机性!==undefined)api_随机性=d.随机性;
+        if(d.最大输出!==undefined)api_最大输出=d.最大输出;
+        if(d.核采样!==undefined)api_核采样=d.核采样;
+        if(d.话题新鲜度!==undefined)api_话题新鲜度=d.话题新鲜度;
+        if(d.重复惩罚!==undefined)api_重复惩罚=d.重复惩罚;
+        updateApiUI();
+        document.getElementById('api-status').textContent='配置导入成功';
+    }catch(e){document.getElementById('api-status').textContent='导入失败：文件格式错误';}};
+    rd.readAsText(f);
+    input.value='';
+}
+
+// ============================================================
+// MAIN PAGE
+// ============================================================
+function renderMainPage(){renderTopBar();renderChronicle();renderDebugPanel();renderOptGrid();renderSoulRingsImg();renderWuhunDisplay();renderMidInfo();document.getElementById('input-display').textContent=shuru;}
+function getTimeText(){if(时间>0)return`斗罗历${时间}年`;if(时间===0)return'斗罗元年';if(时间>-9369)return`唐三出生前${2631-时间}年`;if(时间===-9369)return'斗罗创世元年';return`斗罗创世前${-9369-时间}年`;}
+function getGenderColor(){if(性别==='男'||性别==='雄')return'000000120';if(性别==='女'||性别==='雌')return'120030030';if(性别==='双性'||性别==='雌雄同体')return'120060000';if(性别==='无性'||性别==='非雌非雄')return'120120120';return'000000120';}
+function renderTopBar(){const el=document.getElementById('topbar-info');if(类别==='人类'){let ts=getTimeText(),ps=魂力<=魂力上限?`${魂力}级`:`${魂力上限}级`,gc=getGenderColor();let info=`${ts} | 人类 | ${年龄}岁 · #c${gc}${性别}#c000000000 | ${ps}`;if(精神力!==魂力)info+=` 魂力 |#c060060060 ${精神力}级 精神力`;el.innerHTML=renderMoutputHTML(info,'#000');}else if(类别==='魂兽'){let ts=getTimeText(),gc=getGenderColor();el.innerHTML=renderMoutputHTML(`${ts} | 魂兽 | 未知年龄 · #c${gc}${性别}#c000000000 | ${魂力}年`,'#000');}else{el.innerHTML='';}}
+function renderChronicle(){const el=document.getElementById('chronicle');const entries=记录.slice(-18);let html='';for(let entry of entries){const p=entry.split('%'),type=p[0],content=p.slice(1).join('%');if(type==='年份')html+=`<div class="chron-entry"><div class="chron-year"><img src="${IMG_CONFIG.ui_year}" alt="" onerror="this.style.display='none'">${renderMoutputHTML(content,'#b96900')}</div></div>`;else if(type==='问题')html+=`<div class="chron-entry"><div class="chron-question">${renderMoutputHTML(content,'#46145a')}</div></div>`;else if(type==='结果')html+=`<div class="chron-entry"><div class="chron-result">${renderMoutputHTML(content,'#697d96')}</div></div>`;}el.innerHTML=html;el.scrollTop=el.scrollHeight;}
+
+// ============================================================
+// DEBUG PANEL
+// ============================================================
+function renderDebugPanel(){const el=document.getElementById('debug-area');let h='';h+=`<div class="debug-row"><div class="debug-label">调试时间</div><div class="debug-val">${时间}</div></div>`;h+=`<div class="debug-row" style="justify-content:center;"><span class="debug-btn" onclick="adjVal('time',-100)">-100</span><span class="debug-btn" onclick="adjVal('time',-10)">-10</span><span class="debug-btn" onclick="adjVal('time',-1)">-1</span><span class="debug-btn" onclick="toggleSync()" style="color:${_状态_bool_时间年龄同步?'#f00':'#800'}">⟳</span><span class="debug-btn" onclick="adjVal('time',1)">+1</span><span class="debug-btn" onclick="adjVal('time',10)">+10</span><span class="debug-btn" onclick="adjVal('time',100)">+100</span></div>`;h+=`<div class="debug-row"><div class="debug-label">调试年龄</div><div class="debug-val">${年龄}</div></div>`;h+=`<div class="debug-row" style="justify-content:center;"><span class="debug-btn" onclick="adjVal('age',-20)">-20</span><span class="debug-btn" onclick="adjVal('age',-5)">-5</span><span class="debug-btn" onclick="adjVal('age',-1)">-1</span><span class="debug-btn" onclick="toggleSync()">⟳</span><span class="debug-btn" onclick="adjVal('age',1)">+1</span><span class="debug-btn" onclick="adjVal('age',5)">+5</span><span class="debug-btn" onclick="adjVal('age',20)">+20</span></div>`;h+=`<div class="debug-row"><div class="debug-label">调试颜值</div><div class="debug-val">${颜值}</div></div>`;h+=`<div class="debug-row" style="justify-content:center;"><span class="debug-btn" onclick="adjVal('beauty',-3)">-3</span><span class="debug-btn" onclick="adjVal('beauty',-1)">-1</span><span class="debug-btn" onclick="adjVal('beauty',1)">+1</span><span class="debug-btn" onclick="adjVal('beauty',3)">+3</span></div>`;h+=`<div class="debug-row"><div class="debug-label">调试魂力</div><div class="debug-val">${魂力}</div></div>`;h+=`<div class="debug-row" style="justify-content:center;"><span class="debug-btn" onclick="adjVal('sp',-10)">-10</span><span class="debug-btn" onclick="adjVal('sp',-3)">-3</span><span class="debug-btn" onclick="adjVal('sp',-1)">-1</span><span class="debug-btn" onclick="adjVal('sp',1)">+1</span><span class="debug-btn" onclick="adjVal('sp',3)">+3</span><span class="debug-btn" onclick="adjVal('sp',10)">+10</span></div>`;h+=`<div class="debug-row"><div class="debug-label" style="color:#bc0050;">调试精神力</div><div class="debug-val">${精神力}</div></div>`;h+=`<div class="debug-row" style="justify-content:center;"><span class="debug-btn" onclick="精神力-=1;renderMainPage();">-1</span><span class="debug-btn" onclick="精神力+=1;renderMainPage();">+1</span></div>`;h+=`<div class="debug-row"><div class="debug-label" style="color:#bc0050;">调试体质</div><div class="debug-val">${体质}</div></div>`;h+=`<div class="debug-row" style="justify-content:center;"><span class="debug-btn" onclick="体质-=1;renderMainPage();">-1</span><span class="debug-btn" onclick="体质+=1;renderMainPage();">+1</span></div>`;h+=`<div class="debug-row"><div class="debug-label">调金魂币</div><div class="debug-val">${财富}</div></div>`;h+=`<div class="debug-row" style="justify-content:center;"><span class="debug-btn" onclick="adjVal('money',-100)">-100</span><span class="debug-btn" onclick="adjVal('money',-10)">-10</span><span class="debug-btn" onclick="adjVal('money',-1)">-1</span><span class="debug-btn" onclick="adjVal('money',1)">+1</span><span class="debug-btn" onclick="adjVal('money',10)">+10</span><span class="debug-btn" onclick="adjVal('money',100)">+100</span></div>`;el.innerHTML=h;}
+function adjVal(t,d){switch(t){case'time':if(_状态_bool_时间年龄同步){时间+=d;年龄+=d;}else{时间+=d;}break;case'age':if(_状态_bool_时间年龄同步){年龄+=d;时间+=d;}else{年龄+=d;}break;case'beauty':颜值+=d;break;case'sp':魂力+=d;精神力+=d;体质+=d;break;case'money':财富+=d;break;}renderMainPage();}
+function toggleSync(){_状态_bool_时间年龄同步=1-_状态_bool_时间年龄同步;renderMainPage();}
+
+// ============================================================
+// OPTION GRID
+// ============================================================
+function renderOptGrid(){const el=document.getElementById('opt-grid');const choices=options[main_display_choices]||[];let h='';for(let i=0;i<12;i++){const text=choices[i]||'';const clean=stripRichText(text);const color=getRichColor(text);h+=`<div class="grid-cell" style="color:${color||'#00004b'};" onclick="handleChoice(${i+1})" title="选择 ${i+1}: ${escHtml(clean)}">${renderMoutputHTML(text,'#000')}</div>`;}const hint=choices[12]||'';if(hint){h=`<div style="grid-column:1/5;font-size:12px;text-align:center;padding:2px;color:#888;">${renderMoutputHTML(hint,'#888')}</div>`+h;}el.style.gridTemplateColumns='repeat(4,96px)';el.style.gridTemplateRows=hint?'repeat(4,22px)':'repeat(3,30px)';el.innerHTML=h;}
+
+// ============================================================
+// MID INFO
+// ============================================================
+function renderMidInfo(){const el=document.getElementById('mid-info');let h='';if(魂力<=魂力上限)h+=`<div>魂力：${魂力}级</div>`;else h+=`<div>魂力：${魂力上限}<span style="color:#c86464;">+${魂力-魂力上限}</span>级</div>`;try{h+=`<div>颜值：${颜值表[7+颜值]||'异常'}</div>`;}catch(e){h+=`<div>颜值：异常</div>`;}h+=`<div>财富：${财富}金魂币</div><div>坐标：${坐标}</div>`;if(势力)h+=`<div>加入了${势力}</div>`;else h+=`<div style="color:#96825a;">暂未加入任何势力</div>`;h+=`<div>信仰之力：${信仰之力}%</div>`;if(亲和度>0)h+=`<div>神考：${神考} 亲和度${亲和度}</div>`;else h+=`<div style="color:#96825a;">暂未获得神考</div>`;for(let slot of 自定义槽){if(slot)h+=`<div style="color:#0064b4;margin-top:2px;">${escHtml(slot)}</div>`;}el.innerHTML=h;}
+
+// ============================================================
+// SOUL RINGS — img标签加载图片
+// ============================================================
+function renderSoulRingsImg(){
+    const container=document.getElementById('soul-ring-container');
+    // 清除旧的魂环img
+    container.innerHTML='';
+    let rings=[魂环1,魂环2,魂环3,魂环4,魂环5,魂环6][display_soul-1]||[];
+    if(rings.length>10)rings=rings.slice(0,10);
+    // 原版逻辑: 尺寸索引=10-序号 → 第1环最小在最内圈, 越后加的环越大越靠外
+    // 10档等比尺寸(按原版size_list=480×0.81^i缩放适配410画布)
+    const sizeArr=[];
+    for(let i=0;i<10;i++)sizeArr.push(Math.round(384*Math.pow(0.81,i)));
+    // sizeArr[0]=384(最外/第10环) ... sizeArr[9]=58(最内/第1环)
+    rings.forEach((year,idx)=>{
+        const sizeIndex=Math.max(0,10-(idx+1));   // 第1环→9(最小), 第10环→0(最大)
+        const size=sizeArr[sizeIndex];
+        const img=document.createElement('img');
+        img.className='soul-ring-img';
+        img.src=IMG_CONFIG.yearToImage(year);
+        img.alt=IMG_CONFIG.yearToName(year)+'魂环';
+        img.style.cssText=`left:${(410-size)/2}px;top:${(410-size)/2}px;width:${size}px;height:${size}px;object-fit:contain;`;
+        img.onerror=function(){this.style.display='none';};
+        container.appendChild(img);
+    });
+}
+
+// ============================================================
+// WUHUN DISPLAY
+// ============================================================
+function renderWuhunDisplay(){const el=document.getElementById('wuhun-display');let h='';for(let i=0;i<6;i++){if(!武魂[i])continue;const rings=[魂环1,魂环2,魂环3,魂环4,魂环5,魂环6][i]||[];const maxH=rings.length>0?Math.max(...rings):-1;const bc=IMG_CONFIG.yearToColor(maxH<0?0:maxH);const isCur=(i+1===display_soul);const bg=isCur?'rgba(255,105,105,0.29)':'rgba(205,105,255,0.29)';const tc=isCur?'#6478fa':'#7d1919';const top=i<3?337:377;const left=i<3?(430+i*130):(40+(i-3)*130);h+=`<div class="wuhun-box" style="left:${left}px;top:${top}px;border-color:${bc};background:${bg};color:${tc};" onclick="display_soul=${i+1};renderMainPage();">${武魂[i]}</div>`;}el.innerHTML=h;}
+
+// ============================================================
+// CHOICE HANDLING
+// ============================================================
+function handleChoice(c){
+    choice=c;const s=main_display_choices;
+    if(s==='性别'){if(c>=1&&c<=4){性别=['男','女','双性','无性'][c-1];类别='人类';if(设置_初始设定阶段自动记录){记录.push('问题%种族？');记录.push('结果%人类');记录.push('问题%性别？');记录.push('结果%'+性别);}main_display_choices='穿越时期';renderMainPage();return;}if(c>=5&&c<=8){性别=['雄','雌','雌雄同体','非雌非雄'][c-5];类别='魂兽';if(设置_初始设定阶段自动记录){记录.push('问题%种族？');记录.push('结果%魂兽');记录.push('问题%性别？');记录.push('结果%'+性别);}main_display_choices='魂兽穿越时期';renderMainPage();return;}}
+    if(s==='穿越时期'){const tm=[2601,2611,2621,2630,2631,2637,2643,2645,2646,2651,2651,2661];if(c>=1&&c<=12){时间=tm[c-1];if(设置_初始设定阶段自动记录){记录.push('问题%穿越的时期？');记录.push('结果%'+stripRichText(options['穿越时期'][c-1]));}main_display_choices='年龄';renderMainPage();return;}}
+    if(s==='魂兽穿越时期'){const tm=[1,2000,1500,1200,1000,800,600,400,200,100,-50,-20,0,6];if(c>=1&&c<=14){时间=tm[c-1]||0;main_display_choices='年龄';renderMainPage();return;}}
+    if(s==='年龄'){if(c>=1&&c<=10){年龄=[0,6,12,15,18,25,40,50,80,100][c-1];if(设置_初始设定阶段自动记录){记录.push('问题%穿越时年龄？');记录.push('结果%'+年龄+'岁');}main_display_choices='颜值';renderMainPage();return;}}
+    if(s==='颜值'){if(c>=1&&c<=9){颜值=c-1;if(设置_初始设定阶段自动记录){记录.push('问题%你的颜值？');记录.push('结果%'+(颜值表[7+颜值]||'异常'));}main_display_choices='出生地1';renderMainPage();return;}}
+    if(['出生地1','出生地2','出生地3'].includes(s)){if(c>=1&&c<=10){const t={"出生地1":["星罗帝国","天斗帝国","海外","邪魔森林","明都","天斗城","星罗城","索托城","日月帝国","圣魂村"],"出生地2":["蓝电霸王龙宗","七宝琉璃宗","昊天宗","杀戮之都","落日森林","极北之地","星斗大森林","武魂殿","海神岛","瀚海城"],"出生地3":["冰海","明斗山脉","诺丁城","武魂城","史莱克城","天魂帝国","斗灵帝国","奥克城","东阳城","景阳山"]}[s];坐标=t[c-1];if(设置_初始设定阶段自动记录){记录.push('问题%你的出生地？');记录.push('结果%'+坐标);}进程_初始设定完成=1;main_display_choices='主页';renderMainPage();return;}if(c===12){const n=parseInt(s.charAt(s.length-1));main_display_choices=n<3?'出生地'+(n+1):'出生地1';renderMainPage();return;}}
+    if(s==='主页'){if(c===1){main_display_choices='坐标1';renderMainPage();return;}if(c===5){let rp='魂环10';const l=体质;if(l>=100)rp='魂环100';else if(l>=99)rp='魂环99';else if(l>=95)rp='魂环95';else if(l>=90)rp='魂环90';else if(l>=85)rp='魂环85';else if(l>=80)rp='魂环80';else if(l>=70)rp='魂环70';else if(l>=60)rp='魂环60';else if(l>=50)rp='魂环50';else if(l>=40)rp='魂环40';else if(l>=30)rp='魂环30';else if(l>=20)rp='魂环20';main_display_choices=rp;renderMainPage();return;}if(c===6){main_display_choices='魂骨';renderMainPage();return;}if(c===8){main_display_choices='新武魂';shuru='';renderMainPage();return;}if(c===9){进程存档_来源='main';goToPage('进程存档');return;}if(c===12){main_display_choices='主页2';renderMainPage();return;}}
+    if(s==='主页2'){if(c===1){goToPage('ai续写转盘选项');return;}if(c===3){if(记录.length){撤回暂存=记录.pop();}renderMainPage();return;}if(c===4){if(撤回暂存){记录.push(撤回暂存);撤回暂存='';}renderMainPage();return;}if(c===5){goToPage('自设变量');return;}if(c===12){main_display_choices='主页3';renderMainPage();return;}}
+    if(s==='主页3'){if(c===1){main_display_choices='加入势力1';renderMainPage();return;}if(c===12){main_display_choices='主页';renderMainPage();return;}}
+    if(['加入势力1','加入势力2','加入势力3'].includes(s)){if(c>=1&&c<=10){势力=_势力表[s][c-1];main_display_choices='主页';renderMainPage();return;}if(c===12){const n=parseInt(s.charAt(s.length-1));main_display_choices=n<3?'加入势力'+(n+1):'加入势力1';renderMainPage();return;}}
+    if(['坐标1','坐标2','坐标3'].includes(s)){if(c>=1&&c<=10){坐标=_坐标表[s][c-1];main_display_choices='主页';renderMainPage();return;}if(c===12){const n=parseInt(s.charAt(s.length-1));main_display_choices=n<3?'坐标'+(n+1):'坐标1';renderMainPage();return;}}
+    if(s==='魂骨'){if(c>=1&&c<=5){[十年魂骨,百年魂骨,千年魂骨,万年魂骨,十万年魂骨][c-1]++;main_display_choices='主页';renderMainPage();return;}if(c===8){外附魂骨++;main_display_choices='主页';renderMainPage();return;}if(c===12){main_display_choices='主页';renderMainPage();return;}}
+    if(s==='新武魂'){if(c>=1&&c<=9&&shuru){武魂[武魂数量]=shuru;武魂类别[武魂数量]=stripRichText(options['新武魂'][c-1]);武魂数量++;shuru='';main_display_choices='主页';renderMainPage();return;}if(c===12){main_display_choices='主页';renderMainPage();return;}}
+    let rp=['魂环10','魂环20','魂环30','魂环40','魂环50','魂环60','魂环70','魂环80','魂环85','魂环90','魂环95','魂环99','魂环100'];
+    if(rp.includes(s)){if(c>=1&&c<=11){const sets={魂环10:[10,100,200,300,400,423,424,500,600,775,850,888],魂环20:[10,100,400,700,764,765,800,900,1000,1500,1667,1777],魂环30:[10,100,600,1000,1760,1761,2000,2200,2400,2700,2889,3000],魂环40:[10,100,1000,3000,5000,5001,6000,7000,8000,10000,10500,11000],魂环50:[100,1000,5000,10000,12000,12001,20000,25000,30000,33000,34000,34667],魂环60:[4000,10000,15000,20000,20001,25000,30000,35000,40000,44000,46889,47777],魂环70:[8888,10000,25000,38000,50000,50001,57000,63000,70000,76000,81000,85001],魂环80:[10000,25000,38000,50000,60000,70000,70001,77778,84665,91332,100000,118889],魂环85:[25000,38000,50000,60000,70000,80000,80001,87000,94332,100000,125000,140001],魂环90:[10,100,1000,10000,50000,80000,100000,130000,160000,180000,200000,205001],魂环95:[10,100,1000,10000,70000,100000,130000,160000,180000,200000,205000,208889],魂环99:[10,100,1000,10000,100000,160000,200000,210000,220000,230000,235000,240001],魂环100:[1000,10000,100000,200000,220000,240000,260000,280000,300000,305000,308000,310001]}[s];if(!sets)return;const si=Math.min(体质%10,9);const gailv=[[10,10,10,10,10,10,7,3,2,1,1],[10,10,10,10,10,10,8,3,2,1,1],[10,10,10,10,10,10,8,4,2,1,1],[10,10,10,10,10,10,9,4,2,1,1],[10,10,10,10,10,10,10,4,2,1,1],[10,10,10,10,10,10,10,5,2,1,1],[10,10,10,10,10,10,10,6,2,1,1],[10,10,10,10,10,10,10,7,3,1,1],[10,10,10,10,10,10,10,8,3,1,1],[10,10,10,10,10,10,10,9,4,1,1]][si];吸收概率=gailv[c-1]||5;最终获取的魂环年份=Math.floor((sets[c]-sets[c-1])*Math.random())+sets[c-1];if(吸收概率===10)main_display_choices='附加武魂';else if(最终获取的魂环年份<100000)main_display_choices='普通越级魂环';else main_display_choices='十万年越级魂环';renderMainPage();return;}if(c===12){main_display_choices='十万年献祭';renderMainPage();return;}}
+    if(s==='普通越级魂环'){if(c>=1&&c<=3){const b=c-1;魂力+=b;精神力+=b;体质+=b;main_display_choices='附加武魂';renderMainPage();return;}if(c>=5&&c<=8){if(c>=6&&c<=7){魂力--;精神力--;体质--;}else if(c===8){魂力-=2;精神力-=2;体质-=2;}main_display_choices='主页';renderMainPage();return;}}
+    if(s==='十万年越级魂环'){if(c===1){main_display_choices='附加武魂';renderMainPage();return;}if(c===2){魂力+=2;精神力+=2;体质+=2;main_display_choices='附加武魂';renderMainPage();return;}if(c===3){魂力+=4;精神力+=4;体质+=4;main_display_choices='附加武魂';renderMainPage();return;}if(c===5){main_display_choices='主页';renderMainPage();return;}if(c===6){魂力-=4;精神力-=4;体质-=4;main_display_choices='主页';renderMainPage();return;}if(c===7){魂力-=8;精神力-=8;体质-=8;main_display_choices='主页';renderMainPage();return;}}
+    if(s==='十万年献祭'){if(c>=1&&c<=9){最终获取的魂环年份=Math.floor(Math.random()*100000)+100000*c;main_display_choices='附加武魂';renderMainPage();return;}if(c===10){最终获取的魂环年份=Math.floor(Math.random()*2889)+1000000;main_display_choices='附加武魂';renderMainPage();return;}if(c===11){最终获取的魂环年份=Math.floor(Math.random()*700001)+300000;main_display_choices='附加武魂';renderMainPage();return;}if(c===12){const v=parseInt(shuru);if(!isNaN(v)){最终获取的魂环年份=v;shuru='';main_display_choices='附加武魂';renderMainPage();}return;}}
+    if(s==='附加武魂'){options['附加武魂'][0]=武魂[0]||'';options['附加武魂'][1]=武魂[1]||'';options['附加武魂'][2]=武魂[2]||'';options['附加武魂'][3]=武魂[3]||'';options['附加武魂'][4]=武魂[4]||'';options['附加武魂'][5]=武魂[5]||'';options['附加武魂'][12]=`#R 请选择将这个${最终获取的魂环年份}年的魂环附加给哪个武魂`;if(c>=1&&c<=6){[魂环1,魂环2,魂环3,魂环4,魂环5,魂环6][c-1].push(最终获取的魂环年份);}main_display_choices='主页';renderMainPage();return;}
+    renderMainPage();
+}
+
+// ============================================================
+// INPUT
+// ============================================================
+function handleInput(val){shuru=val;document.getElementById('input-display').textContent=shuru;if(shuru==='截图'||shuru==='printscreen'){shuru+=' | <截图成功>';document.getElementById('input-display').textContent=shuru;return;}if(shuru.endsWith('@@@#')){记录.push('年份%'+时间+' 年');shuru='';document.getElementById('input-display').textContent='';renderMainPage();return;}if(shuru.endsWith('@@#')){记录.push('问题%'+shuru.slice(0,-3));shuru='';document.getElementById('input-display').textContent='';renderMainPage();return;}if(shuru.endsWith('@#')){记录.push('结果%'+shuru.slice(0,-2));shuru='';document.getElementById('input-display').textContent='';renderMainPage();return;}}
+
+// ============================================================
+// AI / VARS / SAVELOAD / PROCESS / UNBIND
+// ============================================================
+function renderAiPage(){const btn=document.getElementById('ai-start-btn');btn.textContent=ai续写_状态==='完成'||ai续写_状态==='失败'?'重新生成':'开始续写';btn.style.background=ai续写_状态==='生成中'?'rgba(150,150,150,0.5)':'rgba(50,120,190,0.78)';document.getElementById('ai-status').textContent='状态：'+ai续写_状态;document.getElementById('ai-question').textContent=ai续写_题目?'题目：'+ai续写_题目:'<结果-题目>';const ol=document.getElementById('ai-options');ol.innerHTML='';for(let i=0;i<6;i++){const t=ai续写_选项[i]||'';ol.innerHTML+=`<div style="padding:4px 0;font-size:13px;color:#000080;">选项${i+1}：${escHtml(t)}</div>`;}}
+function startAi(){ai续写_状态='生成中';renderAiPage();setTimeout(()=>{ai续写_状态='完成';ai续写_题目='模拟续写题目';ai续写_选项=['选项A','选项B','选项C','选项D','选项E','选项F'];renderAiPage();},2000);}
+function writeAiResult(){if(ai续写_状态==='完成'){记录.push('问题%'+ai续写_题目);记录.push('结果%'+ai续写_选项.join('/'));goToPage('main');}}
+function exportAiResult(){alert('导出功能（模拟）');}
+function renderVarsPage(){const list=document.getElementById('var-list');const s=(自设_页-1)*17,e=Math.min(s+17,自定义变量.length);let h='';for(let i=s;i<e;i++){const v=自定义变量[i];const sel=自设_选中===i?'background:rgba(0,170,80,0.3);':'';h+=`<div style="padding:4px 8px;border:1px solid #ccc;cursor:pointer;${sel}" onclick="自设_选中=${i};renderVarsPage();">${i+1}.${v.name}(${v.type})=${v.value}</div>`;}for(let i=e;i<s+17;i++)h+=`<div style="padding:4px 8px;border:1px solid #ddd;color:#999;">${i+1}.&lt;空&gt;</div>`;list.innerHTML=h;const ed=document.getElementById('var-editor');if(自设_选中>=0&&自设_选中<自定义变量.length){const v=自定义变量[自设_选中];ed.innerHTML=`<div style="font-size:14px;margin-bottom:8px;">名称：<input id="vname" value="${escHtml(v.name)}" style="width:200px;"></div><div style="font-size:14px;margin-bottom:8px;">类型：<select id="vtype"><option${v.type==='int'?' selected':''}>int</option><option${v.type==='float'?' selected':''}>float</option><option${v.type==='string'?' selected':''}>string</option><option${v.type==='bool'?' selected':''}>bool</option></select></div><div style="font-size:14px;margin-bottom:8px;">值：<input id="vval" value="${escHtml(String(v.value))}" style="width:300px;"></div><div class="btn btn-red" style="margin-top:10px;width:120px;" onclick="delVar()">删除此变量</div>`;}else{ed.innerHTML='<div style="color:#999;padding:20px;">点击左侧列表选择变量，或点[新建]添加</div>';}const sl=document.getElementById('var-slots');let sh='<div style="font-size:13px;margin-bottom:6px;">显示槽（{变量名}或[序号]嵌入值）：</div>';for(let i=0;i<5;i++){sh+=`<div style="display:flex;align-items:center;margin:3px 0;"><div class="btn" style="width:400px;text-align:left;font-size:12px;" onclick="自设_详情槽=${i};goToPage('显示槽详情');">槽${i+1} ${escHtml(自定义槽[i]||'（空）')}</div></div>`;}sl.innerHTML=sh;}
+function newVar(){if(自定义变量.length<32){自定义变量.push({name:'新变量',type:'int',value:0});自设_选中=自定义变量.length-1;renderVarsPage();}}
+function delVar(){if(自设_选中>=0&&自设_选中<自定义变量.length){自定义变量.splice(自设_选中,1);自设_选中=-1;renderVarsPage();}}
+function renderSlotDetail(){document.getElementById('detail-title').textContent=`显示槽${自设_详情槽+1} 详细显示`;const src=自定义槽[自设_详情槽]||'';document.getElementById('detail-source').textContent='源码：'+(src||'（空）');document.getElementById('detail-result').textContent='结果：'+(src?src:'（无结果）');}
+// 存读档页：导出=下载json到电脑；导入=从本地文件读取；另有localStorage本机快速存档
+function _buildSaveData(){
+    return {__type:'斗罗转盘辅助ui-变量存档',版本:'0.0.4',时间:Date.now(),
+            自定义变量:自定义变量,自定义槽:自定义槽,
+            记录:记录,时间:时间,年龄:年龄,魂力:魂力,魂力上限:魂力上限,精神力:精神力,体质:体质,
+            财富:财富,势力:势力,坐标:坐标,性别:性别,类别:类别,武魂:武魂,武魂数量:武魂数量,
+            魂环1:魂环1,魂环2:魂环2,魂环3:魂环3,魂环4:魂环4,魂环5:魂环5,魂环6:魂环6};
+}
+function exportSave(){
+    const name=(document.getElementById('save-name-input').value||('存档'+new Date().toLocaleString().replace(/[\/: ]/g,'-'))).trim();
+    // 同时写一份到localStorage（本机快速档）
+    const data=_buildSaveData();
+    localStorage.setItem('customSave_'+name,JSON.stringify(data));
+    // 下载json文件到电脑
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=name+'.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setSaveMsg('已下载 '+name+'.json 到电脑（同时存入本机存档）');
+    renderSaveLoadPage();
+}
+function importSave(input){
+    const f=input.files[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=()=>{try{
+        const d=JSON.parse(rd.result);
+        // 载入游戏状态
+        自定义变量=d.自定义变量||自定义变量;
+        自定义槽=d.自定义槽||自定义槽;
+        if(d.记录)记录=d.记录;
+        if(d.时间!==undefined)时间=d.时间;if(d.年龄!==undefined)年龄=d.年龄;
+        if(d.魂力!==undefined)魂力=d.魂力;if(d.魂力上限!==undefined)魂力上限=d.魂力上限;
+        if(d.精神力!==undefined)精神力=d.精神力;if(d.体质!==undefined)体质=d.体质;
+        if(d.财富!==undefined)财富=d.财富;if(d.势力!==undefined)势力=d.势力;
+        if(d.坐标!==undefined)坐标=d.坐标;if(d.性别!==undefined)性别=d.性别;if(d.类别!==undefined)类别=d.类别;
+        if(d.武魂)武魂=d.武魂;if(d.武魂数量!==undefined)武魂数量=d.武魂数量;
+        if(d.魂环1)魂环1=d.魂环1;if(d.魂环2)魂环2=d.魂环2;if(d.魂环3)魂环3=d.魂环3;
+        if(d.魂环4)魂环4=d.魂环4;if(d.魂环5)魂环5=d.魂环5;if(d.魂环6)魂环6=d.魂环6;
+        localStorage.setItem('customSave_'+f.name.replace(/\.json$/,''),JSON.stringify(d));
+        setSaveMsg('成功导入 '+(d.__type||f.name)+'，已载入变量与游戏进度');
+    }catch(e){setSaveMsg('导入失败：文件格式错误（'+e.message+'）','red');}
+        renderSaveLoadPage();
+    };
+    rd.readAsText(f);
+    input.value='';
+}
+function renderSaveLoadPage(){
+    const list=document.getElementById('sl-list');
+    let saves=[];
+    for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i);
+        if(k&&k.startsWith('customSave_')){
+            const n=k.substring(11);
+            try{const d=JSON.parse(localStorage.getItem(k));saves.push({name:n,count:(d.自定义变量?d.自定义变量.length:0)+'变/'+(d.自定义槽?d.自定义槽.filter(x=>x).length:0)+'槽'});}catch(e){saves.push({name:n,count:'?'});}
+        }
+    }
+    saves.sort((a,b)=>b.name.localeCompare(a.name));
+    let h=`<div style="color:#888;font-size:12px;padding:4px;">共${saves.length}条本机存档</div>`;
+    saves.forEach(s=>{
+        h+=`<div style="display:flex;align-items:center;padding:5px 8px;border-bottom:1px solid #ddd;font-size:13px;"><span style="flex:1;">${escHtml(s.name)}</span><span style="color:#888;width:110px;">${s.count}</span>
+        <div class="btn btn-blue" style="font-size:11px;padding:2px 6px;" onclick="loadLocalSave('${escHtml(s.name)}')">读取</div>
+        <div class="btn btn-red" style="font-size:11px;padding:2px 6px;margin-left:6px;" onclick="localStorage.removeItem('customSave_${escHtml(s.name)}');renderSaveLoadPage();">删除</div>
+        <div class="btn" style="font-size:11px;padding:2px 6px;margin-left:6px;" onclick="exportLocalSave('${escHtml(s.name)}')">下载</div></div>`;
+    });
+    if(!saves.length)h+='<div style="padding:16px;text-align:center;color:#999;">暂无本机存档（点击上方"导出存档"会同时生成电脑文件与本机存档）</div>';
+    list.innerHTML=h;
+}
+function loadLocalSave(name){
+    try{
+        const d=JSON.parse(localStorage.getItem('customSave_'+name));
+        自定义变量=d.自定义变量||自定义变量;自定义槽=d.自定义槽||自定义槽;
+        if(d.记录)记录=d.记录;
+        if(d.时间!==undefined)时间=d.时间;if(d.年龄!==undefined)年龄=d.年龄;
+        if(d.魂力!==undefined)魂力=d.魂力;if(d.魂力上限!==undefined)魂力上限=d.魂力上限;
+        if(d.精神力!==undefined)精神力=d.精神力;if(d.体质!==undefined)体质=d.体质;
+        if(d.财富!==undefined)财富=d.财富;if(d.势力!==undefined)势力=d.势力;
+        if(d.坐标!==undefined)坐标=d.坐标;if(d.性别!==undefined)性别=d.性别;if(d.类别!==undefined)类别=d.类别;
+        if(d.武魂)武魂=d.武魂;if(d.武魂数量!==undefined)武魂数量=d.武魂数量;
+        if(d.魂环1)魂环1=d.魂环1;if(d.魂环2)魂环2=d.魂环2;if(d.魂环3)魂环3=d.魂环3;
+        if(d.魂环4)魂环4=d.魂环4;if(d.魂环5)魂环5=d.魂环5;if(d.魂环6)魂环6=d.魂环6;
+        setSaveMsg('已读取本机存档：'+name);
+    }catch(e){setSaveMsg('读取失败','red');}
+}
+function exportLocalSave(name){
+    const raw=localStorage.getItem('customSave_'+name);if(!raw)return;
+    const blob=new Blob([raw],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name+'.json';a.click();URL.revokeObjectURL(a.href);
+    setSaveMsg('已下载 '+name+'.json');
+}
+function setSaveMsg(msg,color){const el=document.getElementById('save-msg');if(el){el.textContent=msg;el.style.color=color||'#1e8e00';}}
+function renderProcessPage(){document.getElementById('proc-summary').innerHTML=`时间:${时间}年  年龄:${年龄}  魂力:${魂力}/${魂力上限}  精神力:${精神力}  体质:${体质}<br>武魂:${武魂.filter(x=>x).join('、')||'无'}  魂环:${[魂环1,魂环2,魂环3,魂环4,魂环5,魂环6].filter(x=>x.length).length}组  大事年表:${记录.length}条  自定义变量:${自定义变量.length}个`;document.getElementById('proc-msg').textContent=进程存档_提示||'';const sd=document.getElementById('proc-slots');sd.innerHTML='';for(let i=0;i<5;i++){sd.innerHTML+=`<div class="btn${进程存档_槽===i?' btn-blue':''}" style="width:56px;height:30px;" onclick="进程存档_槽=${i};renderProcessPage();">槽${i}</div>`;}const list=document.getElementById('proc-list');list.innerHTML='';for(let i=0;i<5;i++){const raw=localStorage.getItem('processSave_slot'+i);if(raw){try{const d=JSON.parse(raw);list.innerHTML+=`<div style="display:flex;align-items:center;padding:4px;border-bottom:1px solid #ddd;font-size:13px;"><span style="flex:1;">槽${i}: ${d.类别||'?'} ${d.性别||'?'} 魂力${d.魂力||0} 位置:${d.坐标||'?'}</span><div class="btn btn-blue" style="font-size:11px;padding:2px 6px;" onclick="loadProcessSave(${i})">读档</div><div class="btn btn-red" style="font-size:11px;padding:2px 6px;" onclick="localStorage.removeItem('processSave_slot${i}');进程存档_提示='已删除';renderProcessPage();">删除</div></div>`;}catch(e){list.innerHTML+=`<div style="padding:4px;font-size:13px;color:#961e1e;">槽${i}: 损坏</div>`;}}else{list.innerHTML+=`<div style="padding:4px;font-size:13px;color:#aaa;">槽${i}: (空)</div>`;}}}
+function saveProcess(){const data={类别,性别,时间,年龄,颜值,魂力,魂力上限,精神力,体质,财富,势力,坐标,武魂,武魂类别,武魂数量,魂环1,魂环2,魂环3,魂环4,魂环5,魂环6,十年魂骨,百年魂骨,千年魂骨,万年魂骨,十万年魂骨,外附魂骨,信仰之力,亲和度,神考,神位,记录,自定义变量,自定义槽,进程_初始设定完成};localStorage.setItem('processSave_slot'+进程存档_槽,JSON.stringify(data));进程存档_提示=`已保存至槽${进程存档_槽}`;renderProcessPage();}
+function loadProcessSave(slot){try{const d=JSON.parse(localStorage.getItem('processSave_slot'+slot));if(!d){进程存档_提示='存档为空';renderProcessPage();return;}类别=d.类别||'';性别=d.性别||'';时间=d.时间||2631;年龄=d.年龄||0;颜值=d.颜值||0;魂力=d.魂力||0;魂力上限=d.魂力上限||99;精神力=d.精神力||0;体质=d.体质||0;财富=d.财富||0;势力=d.势力||'';坐标=d.坐标||'';武魂=d.武魂||["","","","","",""];武魂类别=d.武魂类别||["","","","","",""];武魂数量=d.武魂数量||0;魂环1=d.魂环1||[];魂环2=d.魂环2||[];魂环3=d.魂环3||[];魂环4=d.魂环4||[];魂环5=d.魂环5||[];魂环6=d.魂环6||[];十年魂骨=d.十年魂骨||0;百年魂骨=d.百年魂骨||0;千年魂骨=d.千年魂骨||0;万年魂骨=d.万年魂骨||0;十万年魂骨=d.十万年魂骨||0;外附魂骨=d.外附魂骨||0;信仰之力=d.信仰之力||0;亲和度=d.亲和度||-1;神考=d.神考||'';神位=d.神位||'无';记录=d.记录||["年份%#R初始设定"];自定义变量=d.自定义变量||[];自定义槽=d.自定义槽||["","","","",""];进程_初始设定完成=1;进程存档_提示=`已读取 槽${slot}`;goToPage('main');main_display_choices='主页';}catch(e){进程存档_提示='读取失败';renderProcessPage();}}
+function goBackProcess(){if(进程存档_来源==='启动页面')goToPage('启动页面');else{goToPage('main');main_display_choices='主页';}}
+function renderUnbindPage(){document.getElementById('unbind-msg').textContent=移除绑定_提示||'输入密码后点[确认密码]';document.getElementById('unbind-input-dsp').textContent=shuru||'（请在底部输入区输入密码）';}
+// ============================================================
+// INIT
+// ============================================================
+goToPage('启动页面');
+</script>
+</body>
+</html>
